@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Happy Christmas</title>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image.prod.js"></script>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+
+      a-scene {
+        width: 100vw;
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
+
+      /* Ensure MindAR camera video is visible */
+      #arjs-video {
+        width: 100vw !important;
+        height: 100vh !important;
+        object-fit: cover;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
+
+      /* Ensure canvas is visible and transparent */
+      a-scene canvas {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 2;
+        background: transparent !important;
+      }
+
+      /* Make sure any video element created by MindAR is visible */
+      video[id*="arjs"],
+      video[id*="mindar"],
+      a-scene video {
+        width: 100vw !important;
+        height: 100vh !important;
+        object-fit: cover !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        z-index: 1 !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+
+      #tapToStart {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(0, 0, 0, 0.65);
+        color: #fff;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+        text-align: center;
+        padding: 24px;
+        z-index: 9999;
+      }
+
+      #tapToStart button {
+        font-size: 18px;
+        padding: 14px 18px;
+        border-radius: 12px;
+        border: 0;
+        cursor: pointer;
+        background: #fff;
+        color: #000;
+      }
+
+      #hint {
+        margin-top: 14px;
+        opacity: 0.85;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      #videoOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        display: none;
+        background: #000;
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #videoOverlay.show {
+        display: flex;
+      }
+
+      #videoOverlay video {
+        max-width: 100vw;
+        max-height: 100vh;
+        width: auto;
+        height: auto;
+        object-fit: contain !important;
+        position: relative !important;
+        z-index: 1001 !important;
+        transform: scale(1.15);
+      }
+
+      /* Make video even bigger on mobile devices */
+      @media (max-width: 768px) {
+        #videoOverlay video {
+          transform: scale(2);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- iOS/Chrome often require a user gesture before video w/ audio can play.
+         This overlay provides that "tap" gesture. -->
+    <div id="tapToStart">
+      <div>
+        <button id="startBtn">Tap to start</button>
+      </div>
+    </div>
+
+    <!-- AR Scene - shows camera feed -->
+    <a-scene
+      id="arScene"
+      mindar-image="imageTargetSrc: ./targets.mind;"
+      color-space="sRGB"
+      embedded
+      renderer="colorManagement: true, physicallyCorrectLights, alpha: true"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-assets>
+        <video
+          id="vid"
+          src="./video.mp4"
+          preload="auto"
+          loop
+          playsinline
+          webkit-playsinline
+          crossorigin="anonymous"
+        ></video>
+      </a-assets>
+
+      <a-camera
+        id="camera"
+        position="0 0 0"
+        look-controls="enabled: false"
+        wasd-controls="enabled: false"
+      ></a-camera>
+
+      <a-entity mindar-image-target="targetIndex: 0"></a-entity>
+    </a-scene>
+
+    <!-- Fullscreen video overlay -->
+    <div id="videoOverlay">
+      <video
+        id="overlayVideo"
+        src="./video.mp4"
+        preload="auto"
+        loop
+        playsinline
+        webkit-playsinline
+        crossorigin="anonymous"
+      ></video>
+    </div>
+
+    <script>
+      const startOverlay = document.getElementById("tapToStart");
+      const startBtn = document.getElementById("startBtn");
+      const arScene = document.getElementById("arScene");
+      const videoOverlay = document.getElementById("videoOverlay");
+      const overlayVideo = document.getElementById("overlayVideo");
+
+      let userEnabledPlayback = false;
+      let arSystem = null;
+      let videoStarted = false;
+
+      // User gesture: unlock playback on iOS
+      startBtn.addEventListener("click", async () => {
+        userEnabledPlayback = true;
+        startOverlay.style.display = "none";
+
+        // Start AR system
+        arSystem = arScene.systems["mindar-image-system"];
+
+        // Wait for AR system to be ready and ensure camera feed is visible
+        arScene.addEventListener("arReady", () => {
+          console.log("AR system ready");
+
+          // Ensure camera video is visible
+          const checkVideo = setInterval(() => {
+            const arVideo =
+              document.getElementById("arjs-video") ||
+              document.querySelector("a-scene video") ||
+              document.querySelector('video[id*="arjs"]') ||
+              document.querySelector('video[id*="mindar"]');
+
+            if (arVideo) {
+              arVideo.style.display = "block";
+              arVideo.style.visibility = "visible";
+              arVideo.style.opacity = "1";
+              arVideo.style.width = "100vw";
+              arVideo.style.height = "100vh";
+              arVideo.style.objectFit = "cover";
+              arVideo.style.position = "fixed";
+              arVideo.style.top = "0";
+              arVideo.style.left = "0";
+              arVideo.style.zIndex = "1";
+              clearInterval(checkVideo);
+              console.log("Camera video found and made visible");
+            }
+          }, 50);
+
+          // Stop checking after 3 seconds
+          setTimeout(() => clearInterval(checkVideo), 3000);
+        });
+
+        // Listen for target found event
+        arScene.addEventListener("targetFound", (event) => {
+          console.log("Target found!");
+
+          // Hide AR scene camera feed
+          arScene.style.display = "none";
+
+          // Show video overlay fullscreen
+          videoOverlay.classList.add("show");
+
+          // Unmute and play video with audio
+          if (overlayVideo) {
+            overlayVideo.muted = false;
+            overlayVideo.currentTime = 0; // Reset to start
+            overlayVideo
+              .play()
+              .then(() => {
+                console.log("Video started playing");
+                videoStarted = true;
+              })
+              .catch((e) => {
+                console.log("Video play failed:", e);
+              });
+          }
+        });
+
+        // Listen for target lost event - but keep video playing
+        arScene.addEventListener("targetLost", () => {
+          console.log("Target lost!");
+          // Keep video playing - don't pause or hide
+          // Video will continue playing in the overlay
+        });
+
+        // Start AR
+        try {
+          await arSystem.start();
+          console.log("AR system started");
+        } catch (error) {
+          console.error("Failed to start AR system:", error);
+        }
+      });
+    </script>
+  </body>
+</html>
