@@ -9,6 +9,28 @@
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
+  /* Ensure MindAR camera video is visible */
+      #arjs-video {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw !important;
+        height: 100vh !important;
+        object-fit: cover;
+        z-index: 1;
+      }
+
+      /* Ensure canvas is visible and transparent */
+      a-scene canvas {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 2;
+        background: transparent !important;
+      }
+
   <style>
     html, body {
       margin: 0;
