@@ -1,35 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Harishankar through time</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image.prod.js"></script>
+  <!-- A-Frame + MindAR -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-
-  /* Ensure MindAR camera video is visible */
-      #arjs-video {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw !important;
-        height: 100vh !important;
-        object-fit: cover;
-        z-index: 1;
-      }
-
-      /* Ensure canvas is visible and transparent */
-      a-scene canvas {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        z-index: 2;
-        background: transparent !important;
-      }
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
     html, body {
@@ -41,140 +18,158 @@
       background: black;
     }
 
+    /* FORCE CAMERA FEED TO BE VISIBLE (CRITICAL) */
+    #arjs-video,
+    video[id*="arjs"],
+    video[id*="mindar"] {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      object-fit: cover !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      z-index: 1 !important;
+    }
+
     a-scene {
       position: fixed;
       inset: 0;
-      z-index: 1;
+      z-index: 2;
     }
 
-    #tapToStart {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      background: rgba(0,0,0,0.65);
-      z-index: 9999;
-    }
-
-    #tapToStart button {
-      font-size: 18px;
-      padding: 14px 18px;
-      border-radius: 12px;
-      border: none;
-    }
-
+    /* Video overlay */
     #videoOverlay {
       position: fixed;
       inset: 0;
-      display: none;
       background: black;
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
+      display: none;
+      z-index: 10;
     }
 
     #videoOverlay.show {
-      display: flex;
+      display: block;
     }
 
     #videoOverlay video {
-      height: 100vh;
-      width: auto;
-      aspect-ratio: 9 / 16;
-      object-fit: contain;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Tap to start */
+    #startBtn {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.9);
+      color: white;
+      font-size: 22px;
+      z-index: 20;
     }
   </style>
 </head>
 
 <body>
 
-<!-- Tap to unlock playback -->
-<div id="tapToStart">
-  <button id="startBtn">Tap to start</button>
+<!-- TAP TO START -->
+<div id="startBtn">Tap to start</div>
+
+<!-- VIDEO OVERLAY -->
+<div id="videoOverlay">
+  <video
+    id="overlayVideo"
+    playsinline
+    webkit-playsinline
+    preload="auto">
+  </video>
 </div>
 
-<!-- Scene A → targets.mind -->
+<!-- SCENE A → targets.mind -->
 <a-scene
   id="sceneA"
   mindar-image="imageTargetSrc: ./targets.mind;"
   embedded
+  renderer="alpha: true"
   vr-mode-ui="enabled: false"
   device-orientation-permission-ui="enabled: false">
-
   <a-camera look-controls="false"></a-camera>
   <a-entity mindar-image-target="targetIndex: 0"></a-entity>
 </a-scene>
 
-<!-- Scene B → targets1.mind -->
+<!-- SCENE B → targets1.mind -->
 <a-scene
   id="sceneB"
   mindar-image="imageTargetSrc: ./targets1.mind;"
   embedded
+  renderer="alpha: true"
   vr-mode-ui="enabled: false"
   device-orientation-permission-ui="enabled: false">
-
   <a-camera look-controls="false"></a-camera>
   <a-entity mindar-image-target="targetIndex: 0"></a-entity>
 </a-scene>
 
-<!-- Fullscreen video overlay -->
-<div id="videoOverlay">
-  <video
-    id="overlayVideo"
-    loop
-    playsinline
-    webkit-playsinline>
-  </video>
-</div>
-
 <script>
-  const startBtn = document.getElementById("startBtn");
-  const tapOverlay = document.getElementById("tapToStart");
+const startBtn = document.getElementById("startBtn");
+const overlay = document.getElementById("videoOverlay");
+const video = document.getElementById("overlayVideo");
 
-  const sceneA = document.getElementById("sceneA");
-  const sceneB = document.getElementById("sceneB");
+const sceneA = document.getElementById("sceneA");
+const sceneB = document.getElementById("sceneB");
 
-  const videoOverlay = document.getElementById("videoOverlay");
-  const overlayVideo = document.getElementById("overlayVideo");
+let videoStarted = false;
 
-  let started = false;
-  let videoPlaying = false;
-
-  function playVideo(src) {
-    if (videoPlaying) return;
-    videoPlaying = true;
-
-    sceneA.style.display = "none";
-    sceneB.style.display = "none";
-
-    overlayVideo.src = src;
-    overlayVideo.currentTime = 0;
-    overlayVideo.muted = false;
-
-    videoOverlay.classList.add("show");
-    overlayVideo.play();
+/* Force camera video visibility again after start */
+function forceCameraVisible() {
+  const v =
+    document.getElementById("arjs-video") ||
+    document.querySelector('video[id*="arjs"]') ||
+    document.querySelector('video[id*="mindar"]');
+  if (v) {
+    v.style.display = "block";
+    v.style.visibility = "visible";
+    v.style.opacity = "1";
   }
+}
 
-  startBtn.addEventListener("click", async () => {
-    tapOverlay.style.display = "none";
+/* Play video */
+function playVideo(src) {
+  if (videoStarted) return;
+  videoStarted = true;
 
-    if (!started) {
-      started = true;
+  sceneA.style.display = "none";
+  sceneB.style.display = "none";
 
-      await sceneA.systems["mindar-image-system"].start();
-      await sceneB.systems["mindar-image-system"].start();
-    }
-  });
+  video.src = src;
+  video.currentTime = 0;
+  video.muted = false;
 
-  // targets.mind → video.mp4
-  sceneA.addEventListener("targetFound", () => {
-    playVideo("./video.mp4");
-  });
+  overlay.classList.add("show");
+  video.play();
+}
 
-  // targets1.mind → video1.mp4
-  sceneB.addEventListener("targetFound", () => {
-    playVideo("./video1.mp4");
-  });
+/* Target listeners */
+sceneA.addEventListener("targetFound", () => {
+  playVideo("./video.mp4");
+});
+
+sceneB.addEventListener("targetFound", () => {
+  playVideo("./video1.mp4");
+});
+
+/* Start AR on tap (required on mobile) */
+startBtn.addEventListener("click", () => {
+  startBtn.style.display = "none";
+
+  sceneA.systems["mindar-image-system"].start();
+  sceneB.systems["mindar-image-system"].start();
+
+  setTimeout(forceCameraVisible, 500);
+});
 </script>
 
 </body>
