@@ -1,177 +1,304 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Harishankar through time</title>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image.prod.js"></script>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
-  <!-- A-Frame + MindAR -->
-  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
 
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: black;
-    }
+      a-scene {
+        width: 100vw;
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
 
-    /* FORCE CAMERA FEED TO BE VISIBLE (CRITICAL) */
-    #arjs-video,
-    video[id*="arjs"],
-    video[id*="mindar"] {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      object-fit: cover !important;
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      z-index: 1 !important;
-    }
+      #arjs-video {
+        width: 100vw !important;
+        height: 100vh !important;
+        object-fit: cover;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
 
-    a-scene {
-      position: fixed;
-      inset: 0;
-      z-index: 2;
-    }
+      a-scene canvas {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 2;
+        background: transparent !important;
+      }
 
-    /* Video overlay */
-    #videoOverlay {
-      position: fixed;
-      inset: 0;
-      background: black;
-      display: none;
-      z-index: 10;
-    }
+      video[id*="arjs"],
+      video[id*="mindar"],
+      a-scene video {
+        width: 100vw !important;
+        height: 100vh !important;
+        object-fit: cover !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        z-index: 1 !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
 
-    #videoOverlay.show {
-      display: block;
-    }
+      #tapToStart {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(0, 0, 0, 0.65);
+        color: #fff;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+        text-align: center;
+        padding: 24px;
+        z-index: 9999;
+      }
 
-    #videoOverlay video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+      #tapToStart button {
+        font-size: 18px;
+        padding: 14px 18px;
+        border-radius: 12px;
+        border: 0;
+        cursor: pointer;
+        background: #fff;
+        color: #000;
+      }
 
-    /* Tap to start */
-    #startBtn {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.9);
-      color: white;
-      font-size: 22px;
-      z-index: 20;
-    }
-  </style>
-</head>
+      #hint {
+        margin-top: 14px;
+        opacity: 0.85;
+        font-size: 14px;
+        line-height: 1.4;
+      }
 
-<body>
+      #videoOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        display: none;
+        background: #000;
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
 
-<!-- TAP TO START -->
-<div id="startBtn">Tap to start</div>
+      #videoOverlay.show {
+        display: flex;
+      }
 
-<!-- VIDEO OVERLAY -->
-<div id="videoOverlay">
-  <video
-    id="overlayVideo"
-    playsinline
-    webkit-playsinline
-    preload="auto">
-  </video>
-</div>
+      #videoOverlay video {
+        height: 100vh;
+        width: auto;
+        aspect-ratio: 9 / 16;
+        object-fit: contain;
+        background: black;
+      }
 
-<!-- SCENE A → targets.mind -->
-<a-scene
-  id="sceneA"
-  mindar-image="imageTargetSrc: ./targets.mind;"
-  embedded
-  renderer="alpha: true"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false">
-  <a-camera look-controls="false"></a-camera>
-  <a-entity mindar-image-target="targetIndex: 0"></a-entity>
-</a-scene>
+      @media (max-width: 768px) {
+        #videoOverlay video {
+          transform: scale(1);
+        }
+      }
+    </style>
+  </head>
 
-<!-- SCENE B → targets1.mind -->
-<a-scene
-  id="sceneB"
-  mindar-image="imageTargetSrc: ./targets1.mind;"
-  embedded
-  renderer="alpha: true"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false">
-  <a-camera look-controls="false"></a-camera>
-  <a-entity mindar-image-target="targetIndex: 0"></a-entity>
-</a-scene>
+  <body>
+    <div id="tapToStart">
+      <div>
+        <button id="startBtn">Tap to start</button>
+      </div>
+    </div>
 
-<script>
-const startBtn = document.getElementById("startBtn");
-const overlay = document.getElementById("videoOverlay");
-const video = document.getElementById("overlayVideo");
+    <!-- AR Scene for targets.mind -->
+    <a-scene
+      id="arScene1"
+      mindar-image="imageTargetSrc: ./targets.mind;"
+      color-space="sRGB"
+      embedded
+      renderer="colorManagement: true, physicallyCorrectLights, alpha: true"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-camera
+        position="0 0 0"
+        look-controls="enabled: false"
+        wasd-controls="enabled: false"
+      ></a-camera>
 
-const sceneA = document.getElementById("sceneA");
-const sceneB = document.getElementById("sceneB");
+      <a-entity mindar-image-target="targetIndex: 0"></a-entity>
+    </a-scene>
 
-let videoStarted = false;
+    <!-- AR Scene for targets1.mind -->
+    <a-scene
+      id="arScene2"
+      mindar-image="imageTargetSrc: ./targets1.mind;"
+      color-space="sRGB"
+      embedded
+      renderer="colorManagement: true, physicallyCorrectLights, alpha: true"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+      style="display: none;"
+    >
+      <a-camera
+        position="0 0 0"
+        look-controls="enabled: false"
+        wasd-controls="enabled: false"
+      ></a-camera>
 
-/* Force camera video visibility again after start */
-function forceCameraVisible() {
-  const v =
-    document.getElementById("arjs-video") ||
-    document.querySelector('video[id*="arjs"]') ||
-    document.querySelector('video[id*="mindar"]');
-  if (v) {
-    v.style.display = "block";
-    v.style.visibility = "visible";
-    v.style.opacity = "1";
-  }
-}
+      <a-entity mindar-image-target="targetIndex: 0"></a-entity>
+    </a-scene>
 
-/* Play video */
-function playVideo(src) {
-  if (videoStarted) return;
-  videoStarted = true;
+    <!-- Fullscreen video overlay -->
+    <div id="videoOverlay">
+      <video
+        id="overlayVideo"
+        preload="auto"
+        loop
+        playsinline
+        webkit-playsinline
+        crossorigin="anonymous"
+      ></video>
+    </div>
 
-  sceneA.style.display = "none";
-  sceneB.style.display = "none";
+    <script>
+      const startOverlay = document.getElementById("tapToStart");
+      const startBtn = document.getElementById("startBtn");
+      const arScene1 = document.getElementById("arScene1");
+      const arScene2 = document.getElementById("arScene2");
+      const videoOverlay = document.getElementById("videoOverlay");
+      const overlayVideo = document.getElementById("overlayVideo");
 
-  video.src = src;
-  video.currentTime = 0;
-  video.muted = false;
+      let userEnabledPlayback = false;
+      let arSystem1 = null;
+      let arSystem2 = null;
+      let currentScene = null;
 
-  overlay.classList.add("show");
-  video.play();
-}
+      function makeVideoVisible(scene) {
+        const checkVideo = setInterval(() => {
+          const arVideo =
+            document.getElementById("arjs-video") ||
+            scene.querySelector("video") ||
+            document.querySelector('video[id*="arjs"]') ||
+            document.querySelector('video[id*="mindar"]');
 
-/* Target listeners */
-sceneA.addEventListener("targetFound", () => {
-  playVideo("./video.mp4");
-});
+          if (arVideo) {
+            arVideo.style.display = "block";
+            arVideo.style.visibility = "visible";
+            arVideo.style.opacity = "1";
+            arVideo.style.width = "100vw";
+            arVideo.style.height = "100vh";
+            arVideo.style.objectFit = "cover";
+            arVideo.style.position = "fixed";
+            arVideo.style.top = "0";
+            arVideo.style.left = "0";
+            arVideo.style.zIndex = "1";
+            clearInterval(checkVideo);
+            console.log("Camera video found and made visible");
+          }
+        }, 50);
 
-sceneB.addEventListener("targetFound", () => {
-  playVideo("./video1.mp4");
-});
+        setTimeout(() => clearInterval(checkVideo), 3000);
+      }
 
-/* Start AR on tap (required on mobile) */
-startBtn.addEventListener("click", () => {
-  startBtn.style.display = "none";
+      function playVideo(videoSrc) {
+        console.log("Playing video:", videoSrc);
+        
+        // Hide all AR scenes
+        arScene1.style.display = "none";
+        arScene2.style.display = "none";
 
-  sceneA.systems["mindar-image-system"].start();
-  sceneB.systems["mindar-image-system"].start();
+        // Show video overlay
+        videoOverlay.classList.add("show");
 
-  setTimeout(forceCameraVisible, 500);
-});
-</script>
+        // Set video source and play
+        overlayVideo.src = videoSrc;
+        overlayVideo.muted = false;
+        overlayVideo.currentTime = 0;
+        overlayVideo
+          .play()
+          .then(() => {
+            console.log("Video started playing");
+          })
+          .catch((e) => {
+            console.log("Video play failed:", e);
+          });
+      }
 
-</body>
+      function setupTargetListeners(scene, videoFile) {
+        scene.addEventListener("targetFound", (event) => {
+          console.log(`Target found in ${scene.id}!`);
+          currentScene = scene;
+          playVideo(videoFile);
+        });
+
+        scene.addEventListener("targetLost", () => {
+          console.log(`Target lost in ${scene.id}!`);
+          // Keep video playing
+        });
+      }
+
+      startBtn.addEventListener("click", async () => {
+        userEnabledPlayback = true;
+        startOverlay.style.display = "none";
+
+        // Get AR systems
+        arSystem1 = arScene1.systems["mindar-image-system"];
+        arSystem2 = arScene2.systems["mindar-image-system"];
+
+        // Setup listeners for both scenes
+        setupTargetListeners(arScene1, "./video.mp4");
+        setupTargetListeners(arScene2, "./video1.mp4");
+
+        // Make both scenes ready
+        arScene1.addEventListener("arReady", () => {
+          console.log("AR system 1 ready");
+          makeVideoVisible(arScene1);
+        });
+
+        arScene2.addEventListener("arReady", () => {
+          console.log("AR system 2 ready");
+          arScene2.style.display = "block";
+          makeVideoVisible(arScene2);
+        });
+
+        // Start both AR systems
+        try {
+          await arSystem1.start();
+          console.log("AR system 1 started");
+          
+          await arSystem2.start();
+          console.log("AR system 2 started");
+        } catch (error) {
+          console.error("Failed to start AR systems:", error);
+        }
+      });
+    </script>
+  </body>
 </html>
-
